@@ -1,0 +1,67 @@
+cat 5 cyclones:
+     sid:                      1999298N12099
+
+     name:                     MOCHA
+     sid:                      2023131N11088
+
+cat 4 cyclones:
+     name:                     NOT_NAMED
+     sid:                      1990124N09088
+
+     name:                     NOT_NAMED
+     sid:                      1991113N10091
+
+     name:                     NOT_NAMED
+     sid:                      1994117N07096
+
+     name:                     NOT_NAMED
+     sid:                      2001141N14068
+
+     name:                     GONU
+     sid:                      2007151N14072
+
+     name:                     SIDR
+     sid:                      2007314N10093
+
+     name:                     PHAILIN
+     sid:                      2013281N12098
+
+     name:                     CHAPALA
+     sid:                      2015301N11065
+
+cat 3 cyclones:
+     name:                     FORREST
+     sid:                      1992314N08141
+
+     name:                     NOT_NAMED
+     sid:                      1995323N05097
+
+     name:                     NOT_NAMED
+     sid:                      1999135N12073
+
+     name:                     NOT_NAMED
+     sid:                      2000331N09092
+
+     name:                     MALA
+     sid:                      2006114N08090
+
+     name:                     GIRI
+     sid:                      2010293N17093
+
+     name:                     HUDHUD
+     sid:                      2014279N11096
+
+     name:                     NILOFAR
+     sid:                      2014297N11062
+
+     name:                     MAHA
+     sid:                      2019301N05081
+
+     name:                     TAUKTAE
+     sid:                      2021133N10071
+
+     name:                     BIPARJOY
+     sid:                      2023157N12066
+
+     name:                     TEJ
+     sid:                      2023294N09061
