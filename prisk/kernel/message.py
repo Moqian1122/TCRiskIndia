@@ -28,7 +28,13 @@ class FloodEvent(Message):
     time: pd.Timestamp
     depth: float
     asset: "Asset"
-    
+
+@dataclass
+class CycloneEvent(Message):
+    time: pd.Timestamp
+    strength: float
+    asset: "Asset"
+
 @dataclass
 class StartofYearEvent(Message):
     time: pd.Timestamp

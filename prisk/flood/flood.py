@@ -5,12 +5,12 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 
-from prisk.kernel.message import FloodEvent
+from prisk.kernel.message import CycloneEvent
 
 @dataclasses.dataclass
-class FloodExposure:
+class CycloneExposure:
     """
-    The FloodExposure class represents the exposure of an entity to a flood event expressed
+    The CycloneExposure class represents the exposure of an entity to a Cyclone event expressed
     in terms of return period and depth.
     """
     return_period: float

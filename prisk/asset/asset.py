@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
-
+from shapely.geometry import Point
 from prisk.insurance.industry import Insurance
 
 from typing import Literal
@@ -10,14 +10,14 @@ class Asset:
     def __init__(
             self,
             name: str,
-            flood_damage_curve: pd.Series,
-            flood_exposure: float,
+            cyclone_damage_curve: pd.Series,
+            cyclone_exposure: float,
             production_path: np.ndarray,
             replacement_cost: float,
             unit_price: float=60,
             margin: float=0.2,
             discount_rate: float=0.05,
-            flood_protection: float=0.0,
+            cyclone_protection: float=0.0,
             rebuild_strategy: Literal["rebuild", "build_back_better"] = "rebuild",
             insurer=None
             ) -> None:
@@ -27,51 +27,51 @@ class Asset:
         ----------
         name : str
             Name of the asset
-        flood_damage_curve : pd.Series
-            A pandas series with the depth of flood as index and the damage as values.
+        cyclone_damage_curve : pd.Series
+            A pandas series with the strength of cyclone as index and the damage as values.
             There are two columns: (1) damage, (2) production. The damage is the fraction 
             of the replacement cost that is lost, and the production is the fraction of
             production that is lost.
-        flood_exposure : float
-            The flood exposure of the asset. This is needed to compute the expected 
+        cyclone_exposure : float
+            The cyclone exposure of the asset. This is needed to compute the expected 
             damage needed to determine the insurer's premium.
         production_path : np.ndarray
             The production path of the asset. This is used to compute the revenue path.
         replacement_cost : float
-            The replacement cost of the asset. This is used to compute the damage in case of a flood.
+            The replacement cost of the asset. This is used to compute the damage in case of a cyclone.
         unit_price : float
             The unit price of the asset. This is used to compute the revenue path.
         margin : float
             The margin of the asset. This is used to compute the cost path.
         discount_rate : float
             The discount rate of the asset. This is used to compute the NPV.
-        flood_protection : float
-            The flood protection of the asset. This is used to compute the expected damage
-            against floods.
+        cyclone_protection : float
+            The cyclone protection of the asset. This is used to compute the expected damage
+            against cyclones.
         rebuild_strategy : Literal["rebuild", "build_back_better"]
             The rebuild strategy of the asset. This is used to determine the rebuild strategy
-            after a flood event. The 'rebuild' option just assumes that the firm rebuilds the
-            asset as it was before the flood. The 'build_back_better' option assumes that the
-            firm builds back the asset with flood protection (same cost).
+            after a cyclone event. The 'rebuild' option just assumes that the firm rebuilds the
+            asset as it was before the cyclone. The 'build_back_better' option assumes that the
+            firm builds back the asset with cyclone protection (same cost).
         insurer : Insurance
             The insurance company that insures the asset. This is used to compute the premium.
         """
         self.name = name
-        self.flood_damage_curve = flood_damage_curve
+        self.cyclone_damage_curve = cyclone_damage_curve
         self.production_path = production_path
         self._TIME_HORIZON = len(production_path)
         self.damages = np.repeat(0.0, self._TIME_HORIZON)
         self.disruptions = np.repeat(0.0, self._TIME_HORIZON)
         self.discount_rate = discount_rate
         self.replacement_cost = replacement_cost
-        self.flood_exposure = flood_exposure
+        self.cyclone_exposure = cyclone_exposure
         self.rebuild_strategy = rebuild_strategy
         self._insurer = insurer
 
         self.unit_price = unit_price
         self._MARGIN = margin
         self.cost_path = self.revenue_path * (1 - self._MARGIN)
-        self.flood_protection = flood_protection
+        self.cyclone_protection = cyclone_protection
         self.update_expected_damage()
         self.replacement_cost_path = np.repeat(0, self._TIME_HORIZON)
         self.business_disruption_path = np.repeat(0, self._TIME_HORIZON)
@@ -147,15 +147,15 @@ class Asset:
 
     def update_expected_damage(self) -> None:
         """
-        The expected damages can be derived based on the flood damage curves, the flood exposure
-        and the flood protection of the asset. The expected damage is the sum of the damage
-        of each flood exposure event, weighted by the Poisson probability of the flood event.
+        The expected damages can be derived based on the cyclone damage curves, the cyclone exposure
+        and the cyclone protection of the asset. The expected damage is the sum of the damage
+        of each cyclone exposure event, weighted by the Poisson probability of the cyclone event.
         """
         expected_damage = 0
-        for flood_exposure in self.flood_exposure:
-            impact_depth = round(max(0, flood_exposure.depth - self.flood_protection), 2)
-            expected_damage += self.flood_damage_curve.loc[impact_depth].damage\
-                                     * flood_exposure.poisson_probability \
+        for cyclone_exposure in self.cyclone_exposure:
+            impact_strength = round(max(0, cyclone_exposure.strength - self.cyclone_protection), 2)
+            expected_damage += self.cyclone_damage_curve.loc[impact_strength].damage\
+                                     * cyclone_exposure.poisson_probability \
                                      * self.replacement_cost
         self.__expected_damage = expected_damage
 
@@ -188,27 +188,27 @@ class Asset:
         self.insurance_fair_premium_path[year] += fair_premium
         self.insurance_adjustment_path[year] += premium - fair_premium
 
-    def flood(self, depth: float, time: pd.Timestamp):
-        """ Simulate the flood event and its impact on capital damages and production.
+    def cyclone(self, strength: float, time: pd.Timestamp):
+        """ Simulate the cyclone event and its impact on capital damages and production.
         
         Parameters
         ----------
-        depth : float
-            The depth of the flood event
+        strength : float
+            The strength of the cyclone event
         time : pd.Timestamp
-            The time of the flood event
+            The time of the cyclone event
         """
-        impact_depth = round(max(0, depth - self.flood_protection), 2)
-        damage = self.flood_damage_curve.loc[impact_depth].damage
-        production = self.flood_damage_curve.loc[impact_depth].production
+        impact_strength = round(max(0, strength - self.cyclone_protection), 2)
+        damage = self.cyclone_damage_curve.loc[impact_strength].damage
+        production = self.cyclone_damage_curve.loc[impact_strength].production
         year = int(np.floor(time))
         if self._insurer is None:
             self.replacement_cost_path[year] += self.replacement_cost*damage
         else:
             self._insurer.payout(self.replacement_cost*damage)
-        # Install flood protection
+        # Install cyclone protection
         if self.rebuild_strategy == "build_back_better" and damage > 0:
-            self.flood_protection = depth
+            self.cyclone_protection = strength
             self.update_expected_damage()
         elif self.rebuild_strategy == "rebuild":
             pass
