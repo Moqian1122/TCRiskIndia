@@ -32,13 +32,12 @@ class FloodEvent(Message):
 @dataclass
 class CycloneEvent(Message):
     time: pd.Timestamp
-    strength: float
+    speed: float
     asset: "Asset"
-
+    
 @dataclass
 class StartofYearEvent(Message):
     time: pd.Timestamp
-
 
 @dataclass
 class InsuranceDropoutEvent(Message):

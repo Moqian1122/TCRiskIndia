@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
-from shapely.geometry import Point
+
 from prisk.insurance.industry import Insurance
 
 from typing import Literal
@@ -28,7 +28,7 @@ class Asset:
         name : str
             Name of the asset
         cyclone_damage_curve : pd.Series
-            A pandas series with the strength of cyclone as index and the damage as values.
+            A pandas series with the speed of cyclone as index and the damage as values.
             There are two columns: (1) damage, (2) production. The damage is the fraction 
             of the replacement cost that is lost, and the production is the fraction of
             production that is lost.
@@ -153,8 +153,8 @@ class Asset:
         """
         expected_damage = 0
         for cyclone_exposure in self.cyclone_exposure:
-            impact_strength = round(max(0, cyclone_exposure.strength - self.cyclone_protection), 2)
-            expected_damage += self.cyclone_damage_curve.loc[impact_strength].damage\
+            impact_speed = round(max(0, cyclone_exposure.speed - self.cyclone_protection), 2)
+            expected_damage += self.cyclone_damage_curve.loc[impact_speed].damage\
                                      * cyclone_exposure.poisson_probability \
                                      * self.replacement_cost
         self.__expected_damage = expected_damage
@@ -188,19 +188,19 @@ class Asset:
         self.insurance_fair_premium_path[year] += fair_premium
         self.insurance_adjustment_path[year] += premium - fair_premium
 
-    def cyclone(self, strength: float, time: pd.Timestamp):
+    def cyclone(self, speed: float, time: pd.Timestamp):
         """ Simulate the cyclone event and its impact on capital damages and production.
         
         Parameters
         ----------
-        strength : float
-            The strength of the cyclone event
+        speed : float
+            The speed of the cyclone event
         time : pd.Timestamp
             The time of the cyclone event
         """
-        impact_strength = round(max(0, strength - self.cyclone_protection), 2)
-        damage = self.cyclone_damage_curve.loc[impact_strength].damage
-        production = self.cyclone_damage_curve.loc[impact_strength].production
+        impact_speed = round(max(0, speed - self.cyclone_protection), 2)
+        damage = self.cyclone_damage_curve.loc[impact_speed].damage
+        production = self.cyclone_damage_curve.loc[impact_speed].production
         year = int(np.floor(time))
         if self._insurer is None:
             self.replacement_cost_path[year] += self.replacement_cost*damage
@@ -208,7 +208,7 @@ class Asset:
             self._insurer.payout(self.replacement_cost*damage)
         # Install cyclone protection
         if self.rebuild_strategy == "build_back_better" and damage > 0:
-            self.cyclone_protection = strength
+            self.cyclone_protection = speed
             self.update_expected_damage()
         elif self.rebuild_strategy == "rebuild":
             pass
@@ -245,7 +245,7 @@ class Asset:
         ))
 
         fig.update_layout(
-                title = "PRISK - Waterfall chart - " + self.name,
+                title = "PRISK - "" chart - " + self.name,
                 showlegend = False,
                 template="simple_white",
                 margin=dict(l=20, r=20, t=40, b=20),

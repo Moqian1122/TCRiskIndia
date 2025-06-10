@@ -2,7 +2,7 @@ from queue import PriorityQueue
 
 from numpy import floor
 
-from prisk.kernel.message import FloodEvent, StartofYearEvent, InsuranceDropoutEvent
+from prisk.kernel.message import CycloneEvent, StartofYearEvent, InsuranceDropoutEvent
 
 class Kernel:
     """
@@ -27,10 +27,10 @@ class Kernel:
         while not self.messages.empty() and self.internal_time < time_horizon:
             message = self.messages.get()
             self.internal_time = message.time
-            if isinstance(message, FloodEvent):
+            if isinstance(message, CycloneEvent):
                 if verbose:
-                    print(f"Flood event at year {int(floor(self.internal_time))} at {message.asset} with depth {message.depth}")
-                message.asset.flood(time=message.time, depth=message.depth)
+                    print(f"Cyclone event at year {int(floor(self.internal_time))} at {message.asset} with speed {message.speed}")
+                message.asset.cyclone(time=message.time, speed=message.speed)
             elif isinstance(message, StartofYearEvent):
                 for insurer in self.insurers:
                     insurer.collect_premiums(message.time)
