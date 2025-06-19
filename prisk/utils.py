@@ -10,7 +10,7 @@ from scipy.stats import norm
 
 from prisk.firm import Holding
 from prisk.asset import PowerPlant
-from prisk.flood import FloodExposure
+from prisk.cyclone import CycloneExposure
 
 def convert_to_continous_damage(damage_curves):
     continuous_curves = pd.DataFrame({"index": range(0, int(max((damage_curves["depth"] + 0.01)*100)))})
@@ -22,8 +22,8 @@ def convert_to_continous_damage(damage_curves):
     return continuous_curves
 
 damage_curves = pd.read_excel("https://kuleuven-prisk.s3.eu-central-1.amazonaws.com/damage_curves.xlsx")
-power = pd.read_excel("https://kuleuven-prisk.s3.eu-central-1.amazonaws.com/power.xlsx")
-indian_firms = pd.read_excel("https://kuleuven-prisk.s3.eu-central-1.amazonaws.com/Indian_firms.xlsx")
+power = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/power.xlsx")
+indian_firms = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/Indian_firms.xlsx")
 indian_firm_mapping = mapping = {row["name"]: row["clean"] for _, row in indian_firms[["name", "clean"]].iterrows()}
 power.drop(columns=[2], inplace=True)
 continuous_curves = convert_to_continous_damage(damage_curves)
@@ -104,10 +104,9 @@ def extract_firms(assets, damage_curves=None, leverage_ratios={}, discount_rate=
     assets.loc[:, "asset"] = assets.apply(lambda x: 
                                           PowerPlant(
                                                 name=x["Plant / Project name"],
-                                                flood_damage_curve=damage_curves,
-                                                flood_exposure=[FloodExposure(return_period, x[return_period]) 
+                                                cyclone_damage_curve=damage_curves,
+                                                cyclone_exposure=[CycloneExposure(return_period, x[return_period]) 
                                                                 for return_period in return_period_columns if x[return_period] > 0],
-                                                flood_protection = x["flood_protection"],
                                                 production_path=np.repeat(x["Capacity (MW)"]*24*365, time_horizon),
                                                 replacement_cost=x["Value"],
                                                 unit_price=unit_price,
@@ -139,17 +138,30 @@ def extract_firms(assets, damage_curves=None, leverage_ratios={}, discount_rate=
     return list(OrderedDict.fromkeys(holdings))
 
 
-def link_basins(data, basins, basin_outlet_file, visualize=True, save=False):
+def link_basins(data, basins, visualize=True, save=False):
+
     geo_data = gpd.GeoDataFrame(data, 
                             geometry=gpd.points_from_xy(data.Longitude, data.Latitude),
                             crs="EPSG:4326")
-    get_colors = lambda n: [(50/256, 100/256, np.random.choice(range(150))/256) for _ in range(n)]
+    
     basins = gpd.read_file(basins)
-    basins.loc[:, "color"] = get_colors(len(basins))
-    country_basins = pd.read_csv(basin_outlet_file).HYBAS_ID.to_list()
-    basins = basins[basins.HYBAS_ID.isin(country_basins)]
-    data_merged = geo_data.sjoin(basins[["HYBAS_ID", "geometry"]], how="left")
-    data_merged.loc[:, "HYBAS_ID"] = data_merged.HYBAS_ID.apply(lambda x: str(int(x)) if not pd.isnull(x) else pd.NA)
+        
+    geo_data = geo_data.reset_index(drop=True)
+    basins = basins.reset_index(drop=True)
+    
+    basins["ID"] = basins.index.astype(str)
+
+    get_colors = lambda n: [(50/256, 100/256, np.random.choice(range(150))/256) for _ in range(n)]
+    basins['color'] = get_colors(len(basins))
+
+    # Perform spatial join to link data points with basins
+    data_merged = geo_data.sjoin(basins[["ID", "geometry"]], how="left")
+    # Handle cases where no basin is found
+    data_merged.loc["ID"] = data_merged["ID"].apply(lambda x: str(int(x)) if not pd.isnull(x) else pd.NA)
+    # Drop the 'index_right' column which is created by the spatial join
+    data_merged.drop(columns=["index_right"], inplace=True, errors="ignore")
+
+    # Visualize the results
     if visualize:
         basins.plot(color=basins.color, figsize=(20, 20))
         plt.scatter(data.Longitude, data.Latitude, c="red", s=50)

@@ -11,10 +11,10 @@ from prisk.kernel.message import CycloneEvent
 class CycloneExposure:
     """
     The CycloneExposure class represents the exposure of an entity to a cyclone event expressed
-    in terms of return period and windstrength.
+    in terms of return period and speed.
     """
     return_period: float
-    windstrength: float
+    speed: float
 
     @property
     def probability(self) -> float:
@@ -28,13 +28,13 @@ class CycloneExposure:
         return 1 - np.exp(-1 / self.return_period)
 
     def __str__(self) -> str:
-        return f"CycloneExposure({self.return_period}, {self.windstrength})"
+        return f"CycloneExposure({self.return_period}, {self.speed})"
 
 
 class CycloneBasinSim:
     """
     The CycloneBasinSim class simulates the cyclone events based on the return periods
-    and the windstrength associated to these return periods. The simulations are done
+    and the speed associated to these return periods. The simulations are done
     at the basin-level.
     """
     def __init__(self, entity, events):
@@ -47,7 +47,7 @@ class CycloneBasinSim:
             rp_events = self.events[self.events.return_period == rp].to_dict("records")
             for event in rp_events:
                 for i in range(int(event["events"])):
-                    CycloneEvent(event["year"]-1, exposure.windstrength, self.entity).send(kernel=kernel)
+                    CycloneEvent(event["year"]-1, exposure.speed, self.entity).send(kernel=kernel)
 
     @classmethod
     def generate_events_set(
@@ -124,7 +124,7 @@ class CycloneEntitySim:
         for exposure in self.exposures:
             time = np.random.exponential(exposure.return_period)
             while time < time_horizon:
-                CycloneEvent(time, exposure.windstrength, self.entity).send(kernel=kernel)
+                CycloneEvent(time, exposure.speed, self.entity).send(kernel=kernel)
                 time += np.random.exponential(exposure.return_period)
 
     def simulate(self, time_horizon: float, kernel):

@@ -14,48 +14,48 @@ from openpyxl import load_workbook
 import datetime
 
 
-def vectorized_damage(depth, value, heights, damage_percents):
+def vectorized_damage(speed, value, heights, damage_percents):
     '''
     Vectorized damage function
-    Apply damage function given a flood depth and exposure value.
+    Apply damage function given a cyclone speed and exposure value.
     Function also needs as input the damage function heights > damage_percents
     '''
     # Use np.interp for vectorized linear interpolation
-    damage_percentage = np.interp(depth, heights, damage_percents)
+    damage_percentage = np.interp(speed, heights, damage_percents)
     return damage_percentage * value
 
-def calculate_risk(flood, building_values, heights, damage_percents):
+def calculate_risk(speed, building_values, heights, damage_percents):
     '''
-    Calculate flood risk given a flood map and a map of building values
+    Calculate cyclone risk given a cyclone map and a map of building values
     '''
-    exposure = np.where(flood>0, building_values, 0)
-    risk = vectorized_damage(flood, exposure, heights, damage_percents)
+    exposure = np.where(speed>0, building_values, 0)
+    risk = vectorized_damage(speed, exposure, heights, damage_percents)
 
     return risk
 
-def simple_risk_overlay(flood_path, exposure_path, output_path, damage_function, depth_adjuster):
+def simple_risk_overlay(cyclone_path, exposure_path, output_path, damage_function, speed_adjuster):
     '''
     This function performs a simple risk overlay analysis.
-    It takes as input a flood map, an exposure map, and a vulnerability curve.
+    It takes as input a cyclone map, an exposure map, and a vulnerability curve.
     It outputs a risk raster
     '''
     # Load the rasters
-    flood = rasterio.open(flood_path)
+    cyclone = rasterio.open(cyclone_path)
     exposure = rasterio.open(exposure_path)
 
     # Data info
-    profile = flood.meta.copy()
+    profile = cyclone.meta.copy()
     profile.update(dtype=rasterio.float32, compress='lzw', nodata=0)
-    nodata = flood.nodata
+    nodata = cyclone.nodata
 
     with rasterio.open(output_path, 'w', **profile) as dst:
         i = 0
-        for ji, window in flood.block_windows(1):
+        for ji, window in cyclone.block_windows(1):
             i += 1
 
-            affine = rasterio.windows.transform(window, flood.transform)
+            affine = rasterio.windows.transform(window, cyclone.transform)
             height, width = rasterio.windows.shape(window)
-            bbox = rasterio.windows.bounds(window, flood.transform)
+            bbox = rasterio.windows.bounds(window, cyclone.transform)
 
             profile.update({
                 'height': height,
@@ -63,11 +63,11 @@ def simple_risk_overlay(flood_path, exposure_path, output_path, damage_function,
                 'affine': affine
             })
 
-            flood_array = flood.read(1, window=window)
+            cyclone_array = cyclone.read(1, window=window)
             exposure_array = exposure.read(1, window=window)
-            flood_array = np.where(flood_array>0, flood_array, 0) # remove negative values
-            flood_array = flood_array/depth_adjuster # convert to m
-            risk = calculate_risk(flood_array, exposure_array, damage_function[0], damage_function[1]) # depths index 0 and prp damage index 1
+            cyclone_array = np.where(cyclone_array>0, cyclone_array, 0) # remove negative values
+            cyclone_array = cyclone_array/speed_adjuster # convert to m
+            risk = calculate_risk(cyclone_array, exposure_array, damage_function[0], damage_function[1]) # speed index 0 and prp damage index 1
 
             dst.write(risk.astype(rasterio.float32), window=window, indexes=1)
 
@@ -113,30 +113,30 @@ def create_relative_exposure_layer(exposure_path, total_exposure_value, output_p
 
             dst.write(exposure_array.astype(rasterio.float32), window=window, indexes=1)
 
-def dignad_simple_risk_overlay(flood_path, exposure_path, output_path, damage_function, depth_adjuster, total_exposure_value):
+def dignad_simple_risk_overlay(cyclone_path, exposure_path, output_path, damage_function, speed_adjuster, total_exposure_value):
     '''
     This function performs a simple risk overlay analysis. But instead of calculating the actual damage
     it calcualtes a proportional damage (related to total area or total distance) - this allows us to tweak the exposure information later in the analysis
-    It takes as input a flood map, an exposure map, and a vulnerability curve.
+    It takes as input a cyclone map, an exposure map, and a vulnerability curve.
     It outputs a risk raster
     '''
     # Load the rasters
-    flood = rasterio.open(flood_path)
+    cyclone = rasterio.open(cyclone_path)
     exposure = rasterio.open(exposure_path)
 
     # Data info
-    profile = flood.meta.copy()
+    profile = cyclone.meta.copy()
     profile.update(dtype=rasterio.float32, compress='lzw', nodata=0)
-    nodata = flood.nodata
+    nodata = cyclone.nodata
 
     with rasterio.open(output_path, 'w', **profile) as dst:
         i = 0
-        for ji, window in flood.block_windows(1):
+        for ji, window in cyclone.block_windows(1):
             i += 1
 
-            affine = rasterio.windows.transform(window, flood.transform)
+            affine = rasterio.windows.transform(window, cyclone.transform)
             height, width = rasterio.windows.shape(window)
-            bbox = rasterio.windows.bounds(window, flood.transform)
+            bbox = rasterio.windows.bounds(window, cyclone.transform)
 
             profile.update({
                 'height': height,
@@ -144,48 +144,49 @@ def dignad_simple_risk_overlay(flood_path, exposure_path, output_path, damage_fu
                 'affine': affine
             })
 
-            flood_array = flood.read(1, window=window)
+            cyclone_array = cyclone.read(1, window=window)
             exposure_array = exposure.read(1, window=window)
             exposure_array = np.where(exposure_array>0, exposure_array/total_exposure_value, 0) # calculate proportional area rather than absolute (may have to adjust this for decimal precision)
-            flood_array = np.where(flood_array>0, flood_array, 0) # remove negative values
-            flood_array = flood_array/depth_adjuster # convert to m
-            risk = calculate_risk(flood_array, exposure_array, damage_function[0], damage_function[1]) # depths index 0 and prp damage index 1
+            cyclone_array = np.where(cyclone_array>0, cyclone_array, 0) # remove negative values
+            cyclone_array = cyclone_array/speed_adjuster # convert to m
+            risk = calculate_risk(cyclone_array, exposure_array, damage_function[0], damage_function[1]) # speeds index 0 and prp damage index 1
 
             dst.write(risk.astype(rasterio.float32), window=window, indexes=1)
 
-def simple_risk_overlay_percentile(flood_path, exposure_path, output_path, damage_function, depth_adjuster):
+def simple_risk_overlay_percentile(cyclone_path, exposure_path, output_path, damage_function, speed_adjuster):
     '''
     TODO
     This function performs a simple risk overlay analysis, but calculates the 5th and 95th percentile of damages.
-    It takes as input a flood map, an exposure map, and a vulnerability curve (with standard deviation information).
+    It takes as input a cyclone map, an exposure map, and a vulnerability curve (with standard deviation information).
     It outputs two risk rasters - a 5th and 95th percentile
     '''
     return
 
-def flopros_risk_overlay(flood_path, exposure_path, output_path, mask_path, damage_function, depth_adjuster):
+# this will not be used
+def flopros_risk_overlay(cyclone_path, exposure_path, output_path, mask_path, damage_function, speed_adjuster):
     '''
     This function performs a risk overlay analysis. Before the risk analysis it masks all urban areas in the exposure dataset
-    It takes as input a flood map, an exposure map, an urban area mask map, and a vulnerability curve.
+    It takes as input a cyclone map, an exposure map, an urban area mask map, and a vulnerability curve.
     It outputs a risk raster
     '''
     # Load the rasters
-    flood = rasterio.open(flood_path)
+    cyclone = rasterio.open(cyclone_path)
     exposure = rasterio.open(exposure_path)
     mask = rasterio.open(mask_path)
 
     # Data info
-    profile = flood.meta.copy()
+    profile = cyclone.meta.copy()
     profile.update(dtype=rasterio.float32, compress='lzw', nodata=0)
-    nodata = flood.nodata
+    nodata = cyclone.nodata
 
     with rasterio.open(output_path, 'w', **profile) as dst:
         i = 0
-        for ji, window in flood.block_windows(1):
+        for ji, window in cyclone.block_windows(1):
             i += 1
 
-            affine = rasterio.windows.transform(window, flood.transform)
+            affine = rasterio.windows.transform(window, cyclone.transform)
             height, width = rasterio.windows.shape(window)
-            bbox = rasterio.windows.bounds(window, flood.transform)
+            bbox = rasterio.windows.bounds(window, cyclone.transform)
 
             profile.update({
                 'height': height,
@@ -193,40 +194,41 @@ def flopros_risk_overlay(flood_path, exposure_path, output_path, mask_path, dama
                 'affine': affine
             })
 
-            flood_array = flood.read(1, window=window)
+            cyclone_array = cyclone.read(1, window=window)
             exposure_array = exposure.read(1, window=window)
             mask_array = mask.read(1, window=window)
             exposure_array = np.where(mask_array==1, 0, exposure_array) # wherever the urban mask equals 1, set to zero in exposure dataset
-            flood_array = np.where(flood_array>0, flood_array, 0) # remove negative values
-            flood_array = flood_array/depth_adjuster # convert to m 
-            risk = calculate_risk(flood_array, exposure_array, damage_function[0], damage_function[1]) # depths index 0 and prp damage index 1
+            cyclone_array = np.where(cyclone_array>0, cyclone_array, 0) # remove negative values
+            cyclone_array = cyclone_array/speed_adjuster # convert to m 
+            risk = calculate_risk(cyclone_array, exposure_array, damage_function[0], damage_function[1]) # speeds index 0 and prp damage index 1
 
             dst.write(risk.astype(rasterio.float32), window=window, indexes=1)
 
-def dryproofing_risk_overlay(flood_path, exposure_path, output_path, mask_path, damage_function, damage_function_dp, depth_adjuster):
+# this will not be used
+def dryproofing_risk_overlay(cyclone_path, exposure_path, output_path, mask_path, damage_function, damage_function_dp, speed_adjuster):
     '''
-    This function performs a risk overlay analysis. For masked dryproofed cells, the damage function is adjusted to return no damages for depths < 1m
-    It takes as input a flood map, an exposure map, an urban area mask map, and two vulnerability curves.
+    This function performs a risk overlay analysis. For masked dryproofed cells, the damage function is adjusted to return no damages for speeds < 1m
+    It takes as input a cyclone map, an exposure map, an urban area mask map, and two vulnerability curves.
     It outputs a risk raster
     '''
     # Load the rasters
-    flood = rasterio.open(flood_path)
+    cyclone = rasterio.open(cyclone_path)
     exposure = rasterio.open(exposure_path)
     mask = rasterio.open(mask_path)
 
     # Data info
-    profile = flood.meta.copy()
+    profile = cyclone.meta.copy()
     profile.update(dtype=rasterio.float32, compress='lzw', nodata=0)
-    nodata = flood.nodata
+    nodata = cyclone.nodata
 
     with rasterio.open(output_path, 'w', **profile) as dst:
         i = 0
-        for ji, window in flood.block_windows(1):
+        for ji, window in cyclone.block_windows(1):
             i += 1
 
-            affine = rasterio.windows.transform(window, flood.transform)
+            affine = rasterio.windows.transform(window, cyclone.transform)
             height, width = rasterio.windows.shape(window)
-            bbox = rasterio.windows.bounds(window, flood.transform)
+            bbox = rasterio.windows.bounds(window, cyclone.transform)
 
             profile.update({
                 'height': height,
@@ -234,44 +236,45 @@ def dryproofing_risk_overlay(flood_path, exposure_path, output_path, mask_path, 
                 'affine': affine
             })
 
-            flood_array = flood.read(1, window=window)
+            cyclone_array = cyclone.read(1, window=window)
             exposure_array = exposure.read(1, window=window)
             mask_array = mask.read(1, window=window)
             dry_proof_array = np.where(mask_array==1, exposure_array, 0) # cells for dry proofing are marked as 1
             non_dry_proof_array = np.where(mask_array==1, 0, exposure_array)
-            flood_array = np.where(flood_array>0, flood_array, 0) # remove negative values
-            flood_array = flood_array/depth_adjuster # convert to m
-            dry_proof_risk = calculate_risk(flood_array, dry_proof_array, damage_function_dp[0], damage_function_dp[1]) # pass new damage function for dry proof cells
-            non_dry_proof_risk = calculate_risk(flood_array, non_dry_proof_array, damage_function[0], damage_function[1]) # normal damage function
+            cyclone_array = np.where(cyclone_array>0, cyclone_array, 0) # remove negative values
+            cyclone_array = cyclone_array/speed_adjuster # convert to m
+            dry_proof_risk = calculate_risk(cyclone_array, dry_proof_array, damage_function_dp[0], damage_function_dp[1]) # pass new damage function for dry proof cells
+            non_dry_proof_risk = calculate_risk(cyclone_array, non_dry_proof_array, damage_function[0], damage_function[1]) # normal damage function
             # Sum risk arrays
             risk = dry_proof_risk + non_dry_proof_risk
 
             dst.write(risk.astype(rasterio.float32), window=window, indexes=1)
 
-def relocation_risk_overlay(flood_path, exposure_path, output_path, mask_path, damage_function, depth_adjuster):
+# not be used?
+def relocation_risk_overlay(cyclone_path, exposure_path, output_path, mask_path, damage_function, speed_adjuster):
     '''
-    This function performs a risk overlay analysis. Urban cells in the 2 year flood plain exposed to flood depths > 1 m are removed from the analysis.
-    It takes as input a flood map, an exposure map, an urban cell (2yr flood > 1 m depth) map, and a vulnerability curves.
+    This function performs a risk overlay analysis. Urban cells in the 2 year cyclone plain exposed to cyclone speeds > 1 m are removed from the analysis.
+    It takes as input a cyclone map, an exposure map, an urban cell (2yr cyclone > 1 m speed) map, and a vulnerability curves.
     It outputs a risk raster
     '''
     # Load the rasters
-    flood = rasterio.open(flood_path)
+    cyclone = rasterio.open(cyclone_path)
     exposure = rasterio.open(exposure_path)
     mask = rasterio.open(mask_path)
 
     # Data info
-    profile = flood.meta.copy()
+    profile = cyclone.meta.copy()
     profile.update(dtype=rasterio.float32, compress='lzw', nodata=0)
-    nodata = flood.nodata
+    nodata = cyclone.nodata
 
     with rasterio.open(output_path, 'w', **profile) as dst:
         i = 0
-        for ji, window in flood.block_windows(1):
+        for ji, window in cyclone.block_windows(1):
             i += 1
 
-            affine = rasterio.windows.transform(window, flood.transform)
+            affine = rasterio.windows.transform(window, cyclone.transform)
             height, width = rasterio.windows.shape(window)
-            bbox = rasterio.windows.bounds(window, flood.transform)
+            bbox = rasterio.windows.bounds(window, cyclone.transform)
 
             profile.update({
                 'height': height,
@@ -279,16 +282,17 @@ def relocation_risk_overlay(flood_path, exposure_path, output_path, mask_path, d
                 'affine': affine
             })
 
-            flood_array = flood.read(1, window=window)
+            cyclone_array = cyclone.read(1, window=window)
             exposure_array = exposure.read(1, window=window)
             mask_array = mask.read(1, window=window)
             exposure_array = np.where(mask_array>0, 0, exposure_array) # Remove cells that will be relocated
-            flood_array = np.where(flood_array>0, flood_array, 0) # remove negative values
-            flood_array = flood_array/depth_adjuster # convert to m
-            risk = calculate_risk(flood_array, exposure_array, damage_function[0], damage_function[1])
+            cyclone_array = np.where(cyclone_array>0, cyclone_array, 0) # remove negative values
+            cyclone_array = cyclone_array/speed_adjuster # convert to m
+            risk = calculate_risk(cyclone_array, exposure_array, damage_function[0], damage_function[1])
             
             dst.write(risk.astype(rasterio.float32), window=window, indexes=1)
 
+# these are for copula fitting
 def combine_glofas(start, end, dir, area_filter):
     '''
     Function to combine glofas river discharge data into one xarray given a data directory with all the datasets in them
@@ -586,7 +590,7 @@ def generate_conditional_sample(v, theta, r):
 def interpolate_damages(RPs, losses, sim_aep, protection_level=0.5):
     '''
     Function to interpolate damages between given an annual exceedance probability and 
-    a depth-damage curve
+    a speed-damage curve
     '''
     aeps = [1/i for i in RPs]
     # Ensure AEPs are in ascending order for np.interp
@@ -603,7 +607,7 @@ def interpolate_damages(RPs, losses, sim_aep, protection_level=0.5):
 def d_interpolate_damages(RPs, losses, sim_aep, total_cs, proportional_cs, protection_level=0.5):
     '''
     Function to interpolate damages between given an annual exceedance probability and 
-    a depth-damage curve. Adjusted for DIGNAD - also takes as input the capital stock value and proportional exposure info
+    a speed-damage curve. Adjusted for DIGNAD - also takes as input the capital stock value and proportional exposure info
     '''
     aeps = [1/i for i in RPs]
     # Ensure AEPs are in ascending order for np.interp
@@ -739,7 +743,7 @@ def monte_carlo_dependence_simulation(loss_df, rps, basin_col, epoch_val, scenar
 def urban_monte_carlo_dependence_simulation(loss_df, rps, basin_col, epoch_val, scenario_val, urban_class, protection_level, num_years, ordered_basins, copula_models, num_simulations=10000):
     '''
     Adjusted to account for urban protection
-    Perform Monte Carlo simulations of yearly losses incorporating basin dependencies. This function is specifically for simulating urban flood protection
+    Perform Monte Carlo simulations of yearly losses incorporating basin dependencies. This function is specifically for simulating urban cyclone protection
 
     :param loss_df: dataframe with losses from risk analysis
     :param rps: list of return periods to consider. 
@@ -956,7 +960,7 @@ def sectoral_monte_carlo_dependence_simulation(loss_df, rps, basin_col, epoch_va
 def sectoral_urban_monte_carlo_dependence_simulation(loss_df, rps, basin_col, epoch_val, scenario_val, protection_level, num_years, ordered_basins, copula_models, num_simulations=10000):
     '''
     Adjusted to account for urban protection
-    Perform Monte Carlo simulations of yearly losses incorporating basin dependencies. This function is specifically for simulating urban flood protection
+    Perform Monte Carlo simulations of yearly losses incorporating basin dependencies. This function is specifically for simulating urban cyclone protection
 
     :param loss_df: dataframe with losses from risk analysis
     :param rps: list of return periods to consider. 
