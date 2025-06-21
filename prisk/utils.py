@@ -7,6 +7,7 @@ import geopandas as gpd
 import plotly.graph_objects as go
 import re
 from scipy.stats import norm
+from shapely.geometry import Point
 
 from prisk.firm import Holding
 from prisk.asset import PowerPlant
@@ -137,7 +138,6 @@ def extract_firms(assets, damage_curves=None, leverage_ratios={}, discount_rate=
             holdings.append(holding)
     return list(OrderedDict.fromkeys(holdings))
 
-
 def link_basins(data, basins, visualize=True, save=False):
 
     geo_data = gpd.GeoDataFrame(data, 
@@ -148,7 +148,10 @@ def link_basins(data, basins, visualize=True, save=False):
         
     geo_data = geo_data.reset_index(drop=True)
     basins = basins.reset_index(drop=True)
-    
+
+    if basins.crs != geo_data.crs:
+        basins = basins.to_crs(geo_data.crs)
+        
     basins["ID"] = basins.index.astype(str)
 
     get_colors = lambda n: [(50/256, 100/256, np.random.choice(range(150))/256) for _ in range(n)]
@@ -157,7 +160,7 @@ def link_basins(data, basins, visualize=True, save=False):
     # Perform spatial join to link data points with basins
     data_merged = geo_data.sjoin(basins[["ID", "geometry"]], how="left")
     # Handle cases where no basin is found
-    data_merged.loc["ID"] = data_merged["ID"].apply(lambda x: str(int(x)) if not pd.isnull(x) else pd.NA)
+    data_merged["ID"] = data_merged["ID"].apply(lambda x: str(int(x)) if not pd.isnull(x) else pd.NA)
     # Drop the 'index_right' column which is created by the spatial join
     data_merged.drop(columns=["index_right"], inplace=True, errors="ignore")
 
