@@ -22,7 +22,7 @@ def convert_to_continous_damage(damage_curves):
     continuous_curves.set_index("depth", inplace=True)
     return continuous_curves
 
-damage_curves = pd.read_excel("https://kuleuven-prisk.s3.eu-central-1.amazonaws.com/damage_curves.xlsx")
+damage_curves = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/intensity_filled.xlsx")
 power = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/power.xlsx")
 indian_firms = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/Indian_firms.xlsx")
 indian_firm_mapping = mapping = {row["name"]: row["clean"] for _, row in indian_firms[["name", "clean"]].iterrows()}
