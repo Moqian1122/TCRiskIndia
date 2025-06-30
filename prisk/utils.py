@@ -14,12 +14,12 @@ from prisk.asset import PowerPlant
 from prisk.cyclone import CycloneExposure
 
 def convert_to_continous_damage(damage_curves):
-    continuous_curves = pd.DataFrame({"index": range(0, int(max((damage_curves["depth"] + 0.01)*100)))})
+    continuous_curves = pd.DataFrame({"index": range(0, max((damage_curves["intensity"] + 0.01)*100))})
     continuous_curves["index"] = continuous_curves["index"]/100
     continuous_curves.set_index("index", inplace=True)
-    continuous_curves = continuous_curves.merge(damage_curves, how="left", left_index=True, right_on="depth")
+    continuous_curves = continuous_curves.merge(damage_curves, how="left", left_index=True, right_on="intensity")
     continuous_curves.interpolate(method="linear", inplace=True)
-    continuous_curves.set_index("depth", inplace=True)
+    continuous_curves.set_index("intensity", inplace=True)
     return continuous_curves
 
 damage_curves = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/intensity_filled.xlsx")
