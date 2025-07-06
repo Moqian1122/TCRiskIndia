@@ -148,10 +148,10 @@ def link_basins(data, basins, visualize=True, save=False):
         
     geo_data = geo_data.reset_index(drop=True)
     basins = basins.reset_index(drop=True)
-
+    # fix the crs issue if they are not the same
     if basins.crs != geo_data.crs:
         basins = basins.to_crs(geo_data.crs)
-        
+    
     basins["ID"] = basins.index.astype(str)
 
     get_colors = lambda n: [(50/256, 100/256, np.random.choice(range(150))/256) for _ in range(n)]
@@ -161,10 +161,9 @@ def link_basins(data, basins, visualize=True, save=False):
     data_merged = geo_data.sjoin(basins[["ID", "geometry"]], how="left")
     # Handle cases where no basin is found
     data_merged["ID"] = data_merged["ID"].apply(lambda x: str(int(x)) if not pd.isnull(x) else pd.NA)
-    # Drop the 'index_right' column which is created by the spatial join
     data_merged.drop(columns=["index_right"], inplace=True, errors="ignore")
 
-    # Visualize the results
+    
     if visualize:
         basins.plot(color=basins.color, figsize=(20, 20))
         plt.scatter(data.Longitude, data.Latitude, c="red", s=50)
