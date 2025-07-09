@@ -23,10 +23,10 @@ def convert_to_continous_damage(damage_curves):
     return continuous_curves
 
 damage_curves = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/intensity_filled.xlsx")
-power = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/power.xlsx")
+power = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/etc/power.xlsx")
 indian_firms = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/Indian_firms.xlsx")
 indian_firm_mapping = mapping = {row["name"]: row["clean"] for _, row in indian_firms[["name", "clean"]].iterrows()}
-power.drop(columns=[2], inplace=True)
+#power.drop(columns=[2], inplace=True)
 continuous_curves = convert_to_continous_damage(damage_curves)
 return_period_columns = [5, 10, 25, 50, 100, 200, 500, 1000]
 
@@ -185,8 +185,15 @@ def merton_probability_of_default(V, sigma_V, D, r=0, T=1):
     Returns:
     float: Probability of default.
     """
+    # In your `merton_probability_of_default` function:
+    
+    # Ensure V and D are not zero to avoid division by zero
+    V_safe = max(V, 1e-10)
+    D_safe = max(D, 1e-10)
+    ratio = V_safe / D_safe
+
     # Calculate d2
-    d2 = (np.log(V / D) + (r - 0.5 * sigma_V**2) * T) / (sigma_V * np.sqrt(T))
+    d2 = (np.log(ratio) + (r - 0.5 * sigma_V**2) * T) / (sigma_V * np.sqrt(T))
     # Calculate the probability of default
     PD = norm.cdf(-d2)
     return PD
