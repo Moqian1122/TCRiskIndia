@@ -192,8 +192,21 @@ def merton_probability_of_default(V, sigma_V, D, r=0, T=1):
     D_safe = max(D, 1e-10)
     ratio = V_safe / D_safe
 
+    if ratio <= 0:
+        print(f"Invalid ratio: V={V}, D={D}")
+        return np.nan
+    
     # Calculate d2
     d2 = (np.log(ratio) + (r - 0.5 * sigma_V**2) * T) / (sigma_V * np.sqrt(T))
+
     # Calculate the probability of default
     PD = norm.cdf(-d2)
+
+    if PD < 0 or PD > 1 or np.isnan(PD):
+        print(f"Invalid PD: {PD} for V={V}, D={D}, d2={d2}")
+        PD = min(max(PD, 0), 1)  # clamp to [0, 1]
+
     return PD
+
+def clamp(x, lower=-1, upper=1):
+    return max(min(x, upper), lower)
