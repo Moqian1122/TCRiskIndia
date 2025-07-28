@@ -23,10 +23,10 @@ def convert_to_continous_damage(damage_curves):
     return continuous_curves
 
 damage_curves = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/intensity_filled.xlsx")
-power = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/power.xlsx")
+power = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/etc/power.xlsx")
 indian_firms = pd.read_excel("C:/Users/beste/Documents/GitHub/TCRiskIndia/Indian_firms.xlsx")
 indian_firm_mapping = mapping = {row["name"]: row["clean"] for _, row in indian_firms[["name", "clean"]].iterrows()}
-power.drop(columns=[2], inplace=True)
+#power.drop(columns=[2], inplace=True)
 continuous_curves = convert_to_continous_damage(damage_curves)
 return_period_columns = [5, 10, 25, 50, 100, 200, 500, 1000]
 
@@ -148,10 +148,10 @@ def link_basins(data, basins, visualize=True, save=False):
         
     geo_data = geo_data.reset_index(drop=True)
     basins = basins.reset_index(drop=True)
-
+    # fix the crs issue if they are not the same
     if basins.crs != geo_data.crs:
         basins = basins.to_crs(geo_data.crs)
-        
+    
     basins["ID"] = basins.index.astype(str)
 
     get_colors = lambda n: [(50/256, 100/256, np.random.choice(range(150))/256) for _ in range(n)]
@@ -161,10 +161,9 @@ def link_basins(data, basins, visualize=True, save=False):
     data_merged = geo_data.sjoin(basins[["ID", "geometry"]], how="left")
     # Handle cases where no basin is found
     data_merged["ID"] = data_merged["ID"].apply(lambda x: str(int(x)) if not pd.isnull(x) else pd.NA)
-    # Drop the 'index_right' column which is created by the spatial join
     data_merged.drop(columns=["index_right"], inplace=True, errors="ignore")
 
-    # Visualize the results
+    
     if visualize:
         basins.plot(color=basins.color, figsize=(20, 20))
         plt.scatter(data.Longitude, data.Latitude, c="red", s=50)
@@ -186,8 +185,16 @@ def merton_probability_of_default(V, sigma_V, D, r=0, T=1):
     Returns:
     float: Probability of default.
     """
-    # Calculate d2
-    d2 = (np.log(V / D) + (r - 0.5 * sigma_V**2) * T) / (sigma_V * np.sqrt(T))
-    # Calculate the probability of default
+    # In your `merton_probability_of_default` function:
+    
+    V_safe = np.maximum(V, 1e-10)
+    D_safe = np.maximum(D, 1e-10)
+    ratio = V_safe / D_safe
+
+    d2 = (np.log(ratio) + (r - 0.5 * sigma_V**2) * T) / (sigma_V * np.sqrt(T))
     PD = norm.cdf(-d2)
+
+    # Element-wise clamp for arrays
+    PD = np.clip(PD, 0, 1)
+
     return PD

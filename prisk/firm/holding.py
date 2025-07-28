@@ -1,4 +1,5 @@
 import plotly.graph_objects as go
+import numpy as np
 
 from prisk.asset.asset import Asset
 
@@ -126,8 +127,7 @@ class Holding:
     
     @property
     def original_revenue(self)  -> float:
-        return sum([sum(asset.revenue_path) * self.ownership[asset]/len(asset.revenue_path) for asset in self.assets])
-    
+        return sum([np.sum(asset.revenue_path, dtype=np.float64) * self.ownership[asset] / max(len(asset.revenue_path), 1) for asset in self.assets])    
     @property
     def revenue(self) -> float:
         return sum([sum(asset.cash_flow_path + asset.cost_path) * self.ownership[asset]/len(asset.revenue_path) for asset in self.assets])
