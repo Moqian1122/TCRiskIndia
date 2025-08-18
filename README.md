@@ -18,7 +18,7 @@ Everytime, to activate it, please run the mamba command line below in the 'mini-
 
 **Data**: The data used are all stored in 'Data' folder. It contains data from historical TC tracks, energy aassets information in India, STORM synthetic track database, exceedance for different energy sectors (they are results from initial procedure).
 
-**shape_file**: The file helps to form the cosatlines of India for better visualizations.
+**shape_file**: The file helps to form the coastlines of India for better visualizations.
 
 **images**: The images consist of results from different visualizations, such as for asset locations and track movements.
 
