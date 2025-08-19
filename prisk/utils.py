@@ -185,7 +185,6 @@ def merton_probability_of_default(V, sigma_V, D, r=0, T=1):
     Returns:
     float: Probability of default.
     """
-    # In your `merton_probability_of_default` function:
     
     V_safe = np.maximum(V, 1e-10)
     D_safe = np.maximum(D, 1e-10)
@@ -194,7 +193,6 @@ def merton_probability_of_default(V, sigma_V, D, r=0, T=1):
     d2 = (np.log(ratio) + (r - 0.5 * sigma_V**2) * T) / (sigma_V * np.sqrt(T))
     PD = norm.cdf(-d2)
 
-    # Element-wise clamp for arrays
     PD = np.clip(PD, 0, 1)
 
     return PD
