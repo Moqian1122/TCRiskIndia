@@ -24,4 +24,4 @@ Everytime, to activate it, please run the mamba command line below in the 'mini-
 
 **exposures**: The folder contains the necessary information used to generate local exceedance intensities.
 
-**prisk_tc**: The folder contains core functions from PRISK (https://github.com/rubenkerkhofs/PRISK). Please note that the second part of this thesis is to extend PRISK framework and its code implementation on tropical cyclones. Therefore, this functional package is originally from PRISK repository. We get the permission to apply the package to our thesis. However, please note that some details of the package is adapted to become this folder for tropical-cyclone-specific characteristics.
+**prisk**: The folder contains core functions from PRISK (https://github.com/rubenkerkhofs/PRISK). Please note that the second part of this thesis is to extend PRISK framework and its code implementation on tropical cyclones. Therefore, this functional package is originally from PRISK repository. We get the permission to apply the package to our thesis. However, please note that some details of the package is adapted to become this folder for tropical-cyclone-specific characteristics.
