@@ -14,7 +14,7 @@ Everytime, to activate it, please run the mamba command line below in the 'mini-
 
 `mamba activate climada_env`
 
-**results**: The key result is in the 'results' folder in the 'main' branch. Since this thesis highly relies on geographical locations, the results are presented in the format of visualizations. 
+**results**: The key result is in the 'results' folder in the 'main' branch. Since this thesis highly relies on geographical locations, the results are presented in the format of visualizations. Please note that it's mandatory to run 'Fitting - Co-occurrence - TC.ipynb' across all of the four energy sectors to sample random numbers for different dependence assumptions. As these random number files would be stored to 'Data' folder and be lated used in the Portfolio-level assessments for different dependence scenarios!
 
 **Data**: The data used are all stored in 'Data' folder. It contains data from historical TC tracks, energy aassets information in India, STORM synthetic track database, exceedance for different energy sectors (they are results from initial procedure).
 
